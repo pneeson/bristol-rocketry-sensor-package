@@ -1,0 +1,6 @@
+# Virtual test rig + the PC-side plotting script dependencies.
+# Install with:  python -m pip install -r requirements.txt
+pandas>=2.0
+numpy>=1.24
+matplotlib>=3.7
+pytest>=7.0

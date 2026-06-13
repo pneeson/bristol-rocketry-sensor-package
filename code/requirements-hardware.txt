@@ -1,0 +1,16 @@
+# Dependencies for running launch_sequence.py on the Raspberry Pi Zero 2 W.
+# Install on the Pi with:  pip3 install -r requirements-hardware.txt
+#
+# (These are NOT needed on the PC for the test rig - the rig fakes the hardware.)
+
+# BMP388 altimeter (Adafruit driver + Blinka hardware layer)
+adafruit-circuitpython-bmp3xx
+adafruit-blinka
+
+# SEN55 air-quality sensor (Sensirion official drivers)
+sensirion-i2c-driver
+sensirion-i2c-sen5x
+
+# Status LED / GPIO
+gpiozero
+lgpio
