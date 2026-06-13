@@ -2,8 +2,6 @@
 
 Flight sensor package for the **Bristol Rocketry Tournament (BristolSEDS), Season 1 2025/26**.
 
-**Author:** Tatiana Neeson
-
 A Raspberry Pi Zero 2 W payload that, during flight, logs **altitude / pressure / temperature**
 (Bosch BMP388 altimeter) and **air quality** (Sensirion SEN55 — PM1.0/2.5/10, VOC, NOx) to the
 SD card, with a status LED, a power-up self-test, and robust, power-loss-safe data logging.
