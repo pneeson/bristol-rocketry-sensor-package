@@ -44,7 +44,7 @@ def _run_id_from(path):
     return re.sub(r"^(boot|flight_data|flight_summary)_|\.(txt|csv)$", "", name)
 
 
-def test_all_files_share_one_timestamp(tmp_path):
+def test_all_files_share_one_run_id(tmp_path):
     res = run_sim.simulate("nominal", outdir=str(tmp_path), do_plot=False)
     boot_id = _run_id_from(res["boot_path"])
     csv_id = _run_id_from(res["csv_path"])
@@ -52,5 +52,15 @@ def test_all_files_share_one_timestamp(tmp_path):
     assert boot_id == csv_id == summary_id
 
     # The same value also appears inside the boot and summary file contents.
-    assert f"Run timestamp: {boot_id}" in _read(res["boot_path"])
-    assert f"Run timestamp: {summary_id}" in _read(res["summary_path"])
+    assert f"Run ID: {boot_id}" in _read(res["boot_path"])
+    assert f"Run ID: {summary_id}" in _read(res["summary_path"])
+
+
+def test_boot_counter_increments(tmp_path):
+    # Two runs in the same folder ("SD card") must get consecutive, unique ids.
+    r1 = run_sim.simulate("nominal", outdir=str(tmp_path), do_plot=False)
+    r2 = run_sim.simulate("nominal", outdir=str(tmp_path), do_plot=False)
+    assert _run_id_from(r1["boot_path"]) == "0001"
+    assert _run_id_from(r2["boot_path"]) == "0002"
+    with open(os.path.join(str(tmp_path), "boot_count.txt")) as f:
+        assert f.read().strip() == "2"

@@ -50,9 +50,10 @@ LED_PIN = 17                      # BCM pin for the status LED
 SEA_LEVEL_PRESSURE = 1013.25      # hPa (= mbar); set to the day's local QNH for accurate altitude
 FEET_PER_METER = 3.280839895      # for reporting apogee in feet
 
-# Every run stamps its output files with ONE shared timestamp (set just below), so files
-# from different boots never overwrite each other. For example:
-#   boot_20260615_101500.txt, flight_data_20260615_101500.csv, flight_summary_20260615_101500.txt
+# Every run is identified by a BOOT COUNTER stored on the SD card (the Pi Zero has no
+# real-time clock, so a wall-clock timestamp can be wrong/repeat when it boots offline).
+# All of a run's files share that id, e.g.:
+#   boot_0001.txt, flight_data_0001.csv, flight_summary_0001.txt
 
 FAN_WARMUP_MS = 2 * 60 * 1000     # start the SEN55 measurement (fan) 2 min before launch
 COUNTDOWN_MS = 5 * 60 * 1000      # capture the ground baseline after a 5 min countdown
@@ -89,27 +90,51 @@ def persist(f):
         print("Persist (fsync) failed.", e)
 
 
-def make_run_id():
-    """Return ONE timestamp shared by all of this run's files.
+BOOT_COUNT_FILE = "boot_count.txt"   # persistent run counter kept on the SD card
 
-    Uses the wall clock. The Pi Zero has no real-time clock, so if the clock has not
-    advanced since a previous run a numeric suffix is appended, guaranteeing the output
-    files of different boots never overwrite each other.
+
+def next_boot_number():
+    """Read, increment and persist a boot counter on the SD card.
+
+    The Pi Zero has no real-time clock, so a wall-clock timestamp can be wrong (or repeat)
+    when it boots with no network. A counter stored on the card instead gives every run a
+    unique, monotonically increasing id that survives power cycles.
     """
-    base = time.strftime("%Y%m%d_%H%M%S")
-    run_id = base
-    suffix = 0
+    count = 0
+    try:
+        with open(BOOT_COUNT_FILE, "r") as f:
+            count = int(f.read().strip() or "0")
+    except (OSError, ValueError):
+        count = 0
+    count += 1
+    try:
+        with open(BOOT_COUNT_FILE, "w") as f:
+            f.write(str(count))
+            f.flush()
+            os.fsync(f.fileno())
+    except OSError as e:
+        print("Could not update boot counter (SD problem?).", e)
+    return count
+
+
+def unique_run_id(boot_number):
+    """Zero-padded run id from the boot number, guarded against name clashes in case the
+    counter could not be saved on a previous run."""
+    run_id = "{:04d}".format(boot_number)
+    extra = 0
     while any(
         os.path.exists("{}_{}.{}".format(prefix, run_id, ext))
         for prefix, ext in (("boot", "txt"), ("flight_data", "csv"), ("flight_summary", "txt"))
     ):
-        suffix += 1
-        run_id = "{}_{}".format(base, suffix)
+        extra += 1
+        run_id = "{:04d}_{}".format(boot_number, extra)
     return run_id
 
 
-# The single shared run timestamp and the three output filenames derived from it.
-RUN_ID = make_run_id()
+# A boot counter (not a clock) identifies each run, so ids are unique even without an RTC.
+BOOT_NUMBER = next_boot_number()
+RUN_ID = unique_run_id(BOOT_NUMBER)
+CLOCK_TIME = time.strftime("%Y-%m-%d %H:%M:%S")   # best effort only; may be wrong without an RTC
 BOOT_FILE = f"boot_{RUN_ID}.txt"
 DATA_FILE = f"flight_data_{RUN_ID}.csv"
 SUMMARY_FILE = f"flight_summary_{RUN_ID}.txt"
@@ -125,7 +150,9 @@ def write_summary(baseline_asl, apogee_asl_value, apogee_ms):
     try:
         with open(SUMMARY_FILE, "w") as s:
             s.write("Flight summary\n")
-            s.write(f"Run timestamp: {RUN_ID}\n")
+            s.write(f"Run ID: {RUN_ID}\n")
+            s.write(f"Boot number: {BOOT_NUMBER}\n")
+            s.write(f"Clock time (best effort, no RTC): {CLOCK_TIME}\n")
             s.write(f"Ground baseline ASL (m): {baseline_asl:.2f}\n")
             s.write(f"Apogee ASL (m): {apogee_asl_value:.2f}\n")
             s.write(f"Apogee AGL / height above pad (m): {apogee_agl:.2f}\n")
@@ -180,7 +207,9 @@ def boot_log(line):
 
 
 boot_log("===== Rocket sensor boot self-test =====")
-boot_log(f"Run timestamp: {RUN_ID}")
+boot_log(f"Run ID: {RUN_ID}")
+boot_log(f"Boot number: {BOOT_NUMBER}")
+boot_log(f"Clock time (best effort, no RTC): {CLOCK_TIME}")
 boot_log(
     "SD card: "
     + ("OK (boot file is writable)" if boot_file is not None

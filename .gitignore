@@ -9,6 +9,7 @@ venv/
 # Test rig / flight run artifacts (generated, not source)
 testrig/output/
 boot_*.txt
+boot_count.txt
 flight_data*.csv
 flight_summary*.txt
 *.png

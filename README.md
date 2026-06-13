@@ -50,6 +50,7 @@ Full wiring and a step-by-step install/test guide are in **[SETUP_GUIDE.md](SETU
 .
 ├── README.md                 # this file
 ├── SETUP_GUIDE.md            # full Raspberry Pi setup + I2C check + run instructions
+├── TESTING.md                # how to run the virtual test rig (code testing)
 ├── code/                     # the flight + analysis code
 │   ├── launch_sequence.py    # main flight logger (runs on the Pi)
 │   ├── bmp388.py             # BMP388 altimeter driver wrapper (auto-detects 0x77/0x76)
@@ -100,6 +101,8 @@ python run_sim.py                 # simulate a nominal flight + produce graphs
 python run_sim.py --list          # list fault-injection scenarios
 python -m pytest -q               # run the automated test suite
 ```
+
+Full code-testing instructions are in **[TESTING.md](TESTING.md)**.
 
 ---
 

@@ -190,10 +190,12 @@ python3 launch_sequence.py
 ```
 
 **What you should see (the launch sequence):**
-1. A **boot self-test** prints first (and is saved to `boot_<timestamp>.txt` — see below):
+1. A **boot self-test** prints first (and is saved to `boot_<NNNN>.txt` — see below):
    ```
    ===== Rocket sensor boot self-test =====
-   Run timestamp: 20260615_101500
+   Run ID: 0001
+   Boot number: 1
+   Clock time (best effort, no RTC): 2026-06-15 10:15:00
    SD card: OK (boot file is writable)
    BMP388 altimeter: OK at 0x77  (test read: 134.2 m ASL, 997.5 hPa, 18.3 C)
    SEN55 pollution sensor: OK (comms established; fan + readings warm up before launch)
@@ -209,22 +211,26 @@ python3 launch_sequence.py
 
 To stop early during testing, press **Ctrl+C** (it closes the file cleanly).
 
-### Output files (timestamped per run)
+### Output files (numbered per run)
 
-Every run stamps its files with **one shared timestamp** so a reboot can never overwrite a
-previous run. For a run at 10:15:00 on 15 Jun 2026 you get:
+Every run is identified by a **boot counter** stored on the SD card (`boot_count.txt`): the
+Pi Zero has no real-time clock, so a clock-based timestamp can be wrong or repeat when it
+boots offline. The counter increases by one each boot, so files are unique and a reboot can
+never overwrite a previous run. For boot number 1 you get:
 
-- **`boot_20260615_101500.txt`** — the boot self-test result (sensors + SD card).
-- **`flight_data_20260615_101500.csv`** — the per-row flight log. The `Altitude(m)` column is
+- **`boot_0001.txt`** — the boot self-test result (sensors + SD card).
+- **`flight_data_0001.csv`** — the per-row flight log. The `Altitude(m)` column is
   **height above the launch pad (AGL)** — the ground level captured at countdown is subtracted,
   so the apogee reads correctly even when launching from high ground.
-- **`flight_summary_20260615_101500.txt`** — ground baseline (ASL) and the **apogee** (metres
+- **`flight_summary_0001.txt`** — ground baseline (ASL) and the **apogee** (metres
   above the pad and in feet). Updated as the rocket climbs and again at landing, so the peak is
   saved even if power is lost during descent. Example:
 
 ```
 Flight summary
-Run timestamp: 20260615_101500
+Run ID: 0001
+Boot number: 1
+Clock time (best effort, no RTC): 2026-06-15 10:15:00
 Ground baseline ASL (m): 134.20
 Apogee ASL (m): 591.40
 Apogee AGL / height above pad (m): 457.20
@@ -232,8 +238,8 @@ Apogee AGL (ft): 1500.0
 Time to apogee since liftoff (ms): 10500
 ```
 
-> Note: the Pi Zero has no real-time clock. If it has never seen the correct time (no
-> internet), the timestamp may not be the true date, but it is still unique per run.
+> Note: the `Clock time` line is best-effort — without a real-time clock or internet the Pi's
+> clock may be wrong, but the **boot number** still makes every run unique and ordered.
 
 ### LED signals at a glance
 
@@ -266,7 +272,7 @@ pulling power, to avoid any chance of SD-card corruption.
 The graphing step uses bigger libraries (pandas/matplotlib), so run it on a **PC/laptop**,
 not the Pi:
 
-1. Copy the run's `flight_data_<timestamp>.csv` off the Pi into the same folder as
+1. Copy the run's `flight_data_<NNNN>.csv` off the Pi into the same folder as
    `Data_Plotting_Code.py`, and **rename it to `flight_data.csv`** (the plotting
    script reads that fixed name).
 2. On the PC, install the plotting libraries once:
@@ -307,9 +313,10 @@ not the Pi:
 | `code/bmp388.py` | Raspberry Pi | BMP388 altimeter driver wrapper (auto-detects 0x77/0x76) |
 | `code/sen55.py` | Raspberry Pi | SEN55 air-quality driver wrapper |
 | `code/led_patterns.py` | Raspberry Pi | Status-LED signal patterns |
-| `boot_<timestamp>.txt` (output) | created on the Pi | Boot self-test result (sensors + SD) |
-| `flight_data_<timestamp>.csv` (output) | created on the Pi | Per-row flight log (altitude is AGL) |
-| `flight_summary_<timestamp>.txt` (output) | created on the Pi | Ground baseline + apogee summary |
+| `boot_<NNNN>.txt` (output) | created on the Pi | Boot self-test result (sensors + SD) |
+| `flight_data_<NNNN>.csv` (output) | created on the Pi | Per-row flight log (altitude is AGL) |
+| `flight_summary_<NNNN>.txt` (output) | created on the Pi | Ground baseline + apogee summary |
+| `boot_count.txt` (output) | created on the Pi | Persistent boot counter (run id source) |
 | `code/requirements-hardware.txt` | Raspberry Pi | List of libraries to install |
 | `code/Data_Plotting_Code.py` | PC / laptop | Turns the CSV into 8 graphs |
 | `testrig/` | PC / laptop | Simulates a flight to test the code |
